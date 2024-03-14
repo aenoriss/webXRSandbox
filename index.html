@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebXR Plane Detection Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/webxr/XRControllerModelFactory.js"></script>
+</head>
+<body>
+  <script>
+    // Set up the scene, camera, and renderer
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    // Create a controller
+    const controller = renderer.xr.getController(0);
+    scene.add(controller);
+
+    // Create a material for the planes
+    const planeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
+
+    // Function to handle plane detection
+    function onXRFrame(time, frame) {
+      // Get the reference space
+      const referenceSpace = renderer.xr.getReferenceSpace();
+
+      // Get the plane detection results
+      const detectedPlanes = frame.detectedPlanes;
+
+      // Iterate over the detected planes
+      for (const plane of detectedPlanes) {
+        // Get the plane pose
+        const planePose = frame.getPose(plane.planeSpace, referenceSpace);
+
+        // Create a plane geometry
+        const planeGeometry = new THREE.PlaneGeometry(plane.polygon[0], plane.polygon[1]);
+
+        // Create a plane mesh
+        const planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
+        planeMesh.matrix.fromArray(planePose.transform.matrix);
+        planeMesh.matrixAutoUpdate = false;
+
+        // Add the plane mesh to the scene
+        scene.add(planeMesh);
+      }
+    }
+
+    // Function to start the XR session
+    async function startXRSession() {
+      // Request an immersive-ar session
+      const session = await navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['plane-detection'] });
+
+      // Set the session for the renderer
+      renderer.xr.setSession(session);
+
+      // Add the XR frame listener
+      session.addEventListener('frame', onXRFrame);
+    }
+
+    // Start the XR session when the button is clicked
+    document.addEventListener('click', startXRSession);
+
+    // Render loop
+    function animate() {
+      renderer.setAnimationLoop(render);
+    }
+
+    function render() {
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
